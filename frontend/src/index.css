@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens shadcn — mapeados para a paleta Casa do Açaí
+   (roxo principal #5D1A78 ≈ hsl(283, 64%, 29%)
+    creme #FAF6E8 ≈ hsl(48, 67%, 95%)
+    verde #5DB849 ≈ hsl(108, 45%, 51%)) */
+@layer base {
+  :root {
+    --background: 48 67% 95%;        /* creme #FAF6E8 */
+    --foreground: 283 64% 15%;       /* roxo escuro pra texto */
+
+    --card: 0 0% 100%;
+    --card-foreground: 283 64% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 283 64% 15%;
+
+    --primary: 283 64% 29%;          /* roxo principal */
+    --primary-foreground: 48 67% 97%;
+
+    --secondary: 108 45% 51%;        /* verde folha */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 48 30% 90%;
+    --muted-foreground: 283 20% 40%;
+
+    --accent: 108 45% 51%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 48 30% 85%;
+    --input: 48 30% 85%;
+    --ring: 283 64% 29%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}

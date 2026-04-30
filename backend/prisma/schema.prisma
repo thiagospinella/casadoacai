@@ -1,0 +1,58 @@
+// Schema inicial da Casa do Açaí
+// Apenas auth + configurações da loja. Modelos de produtos/pedidos virão depois.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DELIVERY
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String // hash bcrypt
+  name      String
+  role      Role     @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// Configurações gerais da loja (linha única — sempre id = 1 ou similar)
+model Settings {
+  id              String  @id @default(cuid())
+  storeName       String  @default("Casa do Açaí")
+  slogan          String?
+  whatsapp        String?
+  instagram       String? @default("@casadoacai013_")
+  address         String?
+  deliveryFee     Decimal @default(0) @db.Decimal(10, 2)
+  minOrderValue   Decimal @default(0) @db.Decimal(10, 2)
+  preparationTime Int     @default(30) // minutos
+  isOpen          Boolean @default(true) // override manual
+
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// Horário de funcionamento por dia da semana (0 = domingo, 6 = sábado)
+model OpeningHours {
+  id        String  @id @default(cuid())
+  dayOfWeek Int // 0..6
+  openTime  String // HH:mm
+  closeTime String // HH:mm (pode passar da meia-noite, ex: "02:00")
+  isOpen    Boolean @default(true)
+
+  @@unique([dayOfWeek])
+  @@map("opening_hours")
+}
