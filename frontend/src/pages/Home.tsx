@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, MapPin, MessageCircle, Plus, Sparkles } from 'lucide-react';
+import { Clock, Instagram, MapPin, MessageCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { fetchMenu } from '@/lib/menu-api';
@@ -52,35 +52,41 @@ export function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-casa-cream flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-3 animate-bounce">🍇</div>
-          <p className="text-casa-purple-dark/70 font-medium">Carregando cardápio…</p>
+      <PageFrame>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-5xl mb-3 animate-bounce">🍇</div>
+            <p className="text-sm text-casa-purple-dark/70 font-medium">
+              Carregando cardápio…
+            </p>
+          </div>
         </div>
-      </div>
+      </PageFrame>
     );
   }
 
   if (!menu) {
     return (
-      <div className="min-h-screen bg-casa-cream flex items-center justify-center p-6 text-center">
-        <div>
-          <div className="text-5xl mb-3">😕</div>
-          <p className="text-casa-purple-dark font-semibold">
-            Não foi possível carregar o cardápio.
-          </p>
-          <Button className="mt-4" onClick={() => window.location.reload()}>
-            Tentar de novo
-          </Button>
+      <PageFrame>
+        <div className="min-h-[60vh] flex items-center justify-center px-5 text-center">
+          <div>
+            <div className="text-5xl mb-3">😕</div>
+            <p className="text-casa-purple-dark font-semibold">
+              Não foi possível carregar o cardápio.
+            </p>
+            <Button className="mt-4" onClick={() => window.location.reload()}>
+              Tentar de novo
+            </Button>
+          </div>
         </div>
-      </div>
+      </PageFrame>
     );
   }
 
   const { store, isOpen, nextOpeningTime, combos } = menu;
 
   return (
-    <div className="min-h-screen bg-casa-cream pb-32">
+    <PageFrame>
       <StoreHeader
         slogan={store.slogan}
         isOpen={isOpen}
@@ -89,68 +95,79 @@ export function Home() {
 
       {/* Banner de fechado */}
       {!isOpen && (
-        <div className="bg-amber-100 border-b border-amber-200 text-amber-900 px-4 py-3 text-center text-sm font-medium">
-          ⚠️ Estamos fechados agora.
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-5 py-3 text-[13px] leading-relaxed">
+          <span className="font-semibold">Estamos fechados agora.</span>
           {nextOpeningTime ? <> {nextOpeningTime}.</> : null}
         </div>
       )}
 
-      {/* HERO */}
-      <section className="container max-w-3xl pt-6 pb-2">
-        <div className="text-center px-2">
-          <h1 className="font-display text-4xl sm:text-5xl font-bold text-casa-purple-dark leading-tight">
-            Sua tigela, do seu jeito 🍇
-          </h1>
-          <p className="mt-3 text-casa-purple-dark/70 text-sm sm:text-base font-medium max-w-md mx-auto">
-            Monte do zero ou escolha um combo pronto. Tudo cremoso, fresquinho e
-            entregue rapidinho.
-          </p>
-        </div>
-      </section>
-
-      {/* CTA principal */}
-      <section className="container max-w-3xl pt-4 pb-6">
-        <Link to="/montar" className="block">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-gradient-to-br from-casa-purple to-casa-purple-dark rounded-3xl p-6 sm:p-8 shadow-lg text-white relative overflow-hidden"
-          >
-            <div className="absolute -top-8 -right-6 text-9xl opacity-15 select-none">
+      <main className="pb-32">
+        {/* HERO */}
+        <section className="px-5 pt-10 pb-2">
+          <div className="flex items-start gap-3">
+            <h1 className="font-display font-bold text-[34px] leading-[1.05] text-casa-purple-dark flex-1 tracking-tight">
+              Sua tigela,
+              <br />
+              do seu jeito
+            </h1>
+            <span className="text-4xl mt-1 select-none -rotate-6" aria-hidden>
               🍇
-            </div>
-            <div className="relative">
-              <div className="text-xs font-bold uppercase tracking-wider text-white/80">
-                ⭐ Mais pedido
-              </div>
-              <div className="font-display text-3xl sm:text-4xl font-bold mt-1">
-                Monte sua tigela
-              </div>
-              <div className="text-white/80 text-sm mt-2 max-w-md">
-                Tamanho, frutas, complementos e caldas. Você escolhe tudo.
-              </div>
-              <div className="mt-5 inline-flex items-center gap-2 bg-white text-casa-purple px-5 py-2.5 rounded-full font-bold text-sm shadow">
-                Começar agora →
-              </div>
-            </div>
-          </motion.div>
-        </Link>
-      </section>
-
-      {/* Combos do dia */}
-      <section className="pt-4 pb-6">
-        <div className="container max-w-3xl">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-2xl font-bold text-casa-purple-dark">
-              Combos do dia
-            </h2>
-            <span className="text-xs text-casa-purple-dark/60">
-              Deslize →
             </span>
           </div>
-        </div>
-        <div className="overflow-x-auto snap-x snap-mandatory scroll-pl-4 px-4 sm:px-6 pb-2 hide-scrollbar">
-          <div className="flex gap-3 min-w-min">
+          <p className="text-[15px] text-casa-purple-dark/65 mt-4 leading-relaxed max-w-[26ch]">
+            Monte do zero ou escolha um combo. Tudo cremoso, fresquinho e
+            entregue rapidinho.
+          </p>
+        </section>
+
+        {/* CTA principal: Monte sua tigela */}
+        <section className="px-5 pt-6">
+          <Link to="/montar" className="block">
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              className="relative overflow-hidden rounded-3xl p-6 text-white shadow-lg shadow-casa-purple/25 bg-gradient-to-br from-casa-purple to-casa-purple-dark"
+            >
+              {/* Decoração */}
+              <span
+                className="absolute -right-3 -top-3 text-7xl opacity-15 select-none rotate-12"
+                aria-hidden
+              >
+                🍇
+              </span>
+              <span
+                className="absolute right-12 -bottom-2 text-5xl opacity-15 select-none -rotate-12"
+                aria-hidden
+              >
+                🍓
+              </span>
+
+              <div className="relative">
+                <span className="inline-flex items-center bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded-full px-3 py-1 tracking-wider">
+                  🌟 MAIS PEDIDO
+                </span>
+                <h2 className="font-display text-[28px] font-bold mt-3 leading-tight">
+                  Monte sua tigela
+                </h2>
+                <p className="text-white/75 text-[13px] mt-2 leading-relaxed max-w-[28ch]">
+                  Tamanho, frutas, complementos e caldas. Você escolhe tudo.
+                </p>
+                <div className="mt-5 bg-white text-casa-purple py-3 rounded-2xl font-semibold text-[15px] text-center w-full">
+                  Começar agora →
+                </div>
+              </div>
+            </motion.div>
+          </Link>
+        </section>
+
+        {/* COMBOS — lista vertical */}
+        <section className="px-5 pt-12">
+          <h2 className="font-display text-[22px] font-bold text-casa-purple-dark leading-tight">
+            Combos do dia
+          </h2>
+          <p className="text-[13px] text-casa-purple-dark/60 mt-0.5 mb-4">
+            Já prontinhos pra você 😋
+          </p>
+          <div>
             {combos.map((combo) => (
               <ComboCard
                 key={combo.id}
@@ -160,68 +177,53 @@ export function Home() {
               />
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Monte a sua (segunda CTA) */}
-      <section className="container max-w-3xl py-4">
-        <Link to="/montar">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border-2 border-casa-purple/10 flex items-center gap-4 hover:border-casa-purple/30 transition">
-            <div className="bg-casa-green/15 rounded-2xl p-3 text-3xl">
-              <Sparkles className="h-8 w-8 text-casa-green" />
+        {/* INFO DA LOJA */}
+        <section className="px-5 pt-12">
+          <div className="bg-casa-purple-dark text-casa-cream rounded-2xl p-6 space-y-3.5 text-[14px]">
+            <h3 className="font-display text-lg font-bold text-white mb-1">
+              Casa do Açaí
+            </h3>
+            {store.address && (
+              <InfoLine icon={<MapPin className="h-4 w-4" />} text={store.address} />
+            )}
+            {store.whatsapp && (
+              <InfoLine
+                icon={<MessageCircle className="h-4 w-4" />}
+                text={formatPhone(store.whatsapp)}
+                href={`https://wa.me/55${store.whatsapp.replace(/\D/g, '')}`}
+              />
+            )}
+            {store.instagram && (
+              <InfoLine
+                icon={<Instagram className="h-4 w-4" />}
+                text={store.instagram}
+                href={`https://instagram.com/${store.instagram.replace('@', '')}`}
+              />
+            )}
+            <div className="pt-2 mt-2 border-t border-casa-cream/10">
+              <InfoLine
+                icon={<Clock className="h-4 w-4" />}
+                text="Todos os dias 14h às 02h"
+              />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-display font-bold text-casa-purple-dark">
-                Prefere fazer do zero?
-              </div>
-              <div className="text-sm text-casa-purple-dark/60 mt-0.5">
-                Escolha tamanho, frutas, complementos e caldas.
-              </div>
-            </div>
-            <div className="text-casa-purple text-2xl">→</div>
           </div>
-        </Link>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="container max-w-3xl pt-8 pb-6 mt-4">
-        <div className="bg-white rounded-2xl p-5 space-y-3 text-sm text-casa-purple-dark/80">
-          {store.address && (
-            <div className="flex items-start gap-3">
-              <MapPin className="h-4 w-4 text-casa-purple flex-shrink-0 mt-0.5" />
-              <span>{store.address}</span>
-            </div>
-          )}
-          {store.whatsapp && (
-            <a
-              href={`https://wa.me/55${store.whatsapp.replace(/\D/g, '')}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 hover:text-casa-purple"
-            >
-              <MessageCircle className="h-4 w-4 text-casa-purple flex-shrink-0" />
-              {formatPhone(store.whatsapp)}
-            </a>
-          )}
-          {store.instagram && (
-            <a
-              href={`https://instagram.com/${store.instagram.replace('@', '')}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 hover:text-casa-purple"
-            >
-              <Instagram className="h-4 w-4 text-casa-purple flex-shrink-0" />
-              {store.instagram}
-            </a>
-          )}
-          <div className="text-xs text-casa-purple-dark/60 pt-2 border-t border-casa-purple/10">
-            Aberto todos os dias 14h às 02h
-          </div>
-        </div>
-        <p className="text-center text-xs text-casa-purple-dark/40 mt-4">
-          Feito com 💜 pela Wave Creations
+        {/* MICRO FOOTER */}
+        <p className="text-center text-[11px] text-casa-purple-dark/40 py-6">
+          Feito com 💜 pela{' '}
+          <a
+            href="https://wave-creations.pages.dev/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold hover:text-casa-purple transition-colors"
+          >
+            Wave Creations
+          </a>
         </p>
-      </footer>
+      </main>
 
       <CartFloating onClick={() => setCartOpen(true)} />
       <CartDrawer
@@ -231,16 +233,76 @@ export function Home() {
         deliveryFee={store.deliveryFee}
         minOrderValue={store.minOrderValue}
       />
+    </PageFrame>
+  );
+}
 
+// ============================================================
+// PageFrame — wrapper mobile-first com decoração desktop
+// ============================================================
+
+interface PageFrameProps {
+  children: React.ReactNode;
+}
+
+function PageFrame({ children }: PageFrameProps) {
+  return (
+    <div className="min-h-screen bg-casa-cream casa-side-decoration">
+      <div className="max-w-md mx-auto bg-casa-cream min-h-screen relative lg:shadow-2xl lg:shadow-casa-purple/10">
+        {children}
+      </div>
+
+      {/* Estilos locais — pattern só em lg+ pra dar moldura ao app */}
       <style>{`
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @media (min-width: 1024px) {
+          .casa-side-decoration {
+            background-color: #F2EBD8;
+            background-image:
+              radial-gradient(circle, rgba(93,26,120,0.10) 1px, transparent 1px);
+            background-size: 28px 28px;
+            background-attachment: fixed;
+          }
+        }
       `}</style>
     </div>
   );
 }
 
-// ----- Card de combo -----
+// ============================================================
+// InfoLine — linha do card de info da loja
+// ============================================================
+
+interface InfoLineProps {
+  icon: React.ReactNode;
+  text: string;
+  href?: string;
+}
+
+function InfoLine({ icon, text, href }: InfoLineProps) {
+  const inner = (
+    <div className="flex items-center gap-3">
+      <span className="text-casa-cream/55 shrink-0">{icon}</span>
+      <span className="leading-snug">{text}</span>
+    </div>
+  );
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="block hover:text-white transition"
+      >
+        {inner}
+      </a>
+    );
+  }
+  return inner;
+}
+
+// ============================================================
+// ComboCard — card no carrossel
+// ============================================================
 
 interface ComboCardProps {
   combo: Combo;
@@ -249,40 +311,51 @@ interface ComboCardProps {
 }
 
 function ComboCard({ combo, disabled, onAdd }: ComboCardProps) {
-  const visibleIngredients = useMemo(
+  const visible = useMemo(
     () => combo.ingredients.slice(0, 3).map((i) => i.name),
     [combo.ingredients],
   );
-  const extraCount = combo.ingredients.length - visibleIngredients.length;
+  const extra = combo.ingredients.length - visible.length;
 
   return (
-    <article className="snap-start shrink-0 w-[230px] bg-white rounded-2xl shadow-md p-4 flex flex-col">
-      <div className="bg-gradient-to-br from-casa-cream to-white rounded-2xl h-28 flex items-center justify-center text-6xl">
-        {comboEmoji(combo.name)}
+    <article className="bg-white rounded-2xl shadow-sm shadow-casa-purple/10 border border-casa-purple/5 p-4 mb-3 flex items-center gap-4">
+      {/* Esquerda: emoji em quadrado com gradiente */}
+      <div
+        className="h-20 w-20 rounded-2xl bg-gradient-to-br from-casa-cream to-casa-purple/5 flex items-center justify-center shrink-0"
+        aria-hidden
+      >
+        <span className="text-5xl leading-none select-none">
+          {comboEmoji(combo.name)}
+        </span>
       </div>
-      <h3 className="font-display font-bold text-lg text-casa-purple-dark mt-3 leading-tight">
-        {combo.name}
-      </h3>
-      <div className="text-xs text-casa-purple-dark/60 mt-0.5">
-        {combo.size.name}
-      </div>
-      <p className="text-xs text-casa-purple-dark/70 mt-2 flex-1 line-clamp-2">
-        {visibleIngredients.join(', ')}
-        {extraCount > 0 ? ` + ${extraCount} mais` : ''}
-      </p>
-      <div className="flex items-center justify-between mt-3">
-        <div className="font-display text-xl font-bold text-casa-purple">
-          {formatBRL(combo.price)}
+
+      {/* Direita: info */}
+      <div className="flex-1 min-w-0">
+        <h3 className="font-display text-lg font-bold text-casa-purple-dark leading-tight">
+          {combo.name}
+        </h3>
+        <div className="text-[10px] uppercase tracking-[0.12em] text-casa-purple-dark/50 font-bold mt-0.5">
+          {combo.size.name}
         </div>
-        <button
-          type="button"
-          onClick={onAdd}
-          disabled={disabled}
-          aria-label={`Adicionar ${combo.name}`}
-          className="h-9 w-9 rounded-full bg-casa-purple text-white hover:bg-casa-purple-dark transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
+        <p className="text-[12px] text-casa-purple-dark/70 mt-1 leading-snug line-clamp-2">
+          {visible.join(', ')}
+          {extra > 0 ? ` + ${extra} mais` : ''}
+        </p>
+
+        <div className="mt-2 flex justify-between items-center">
+          <div className="font-display text-xl font-bold text-casa-purple tabular-nums">
+            {formatBRL(combo.price)}
+          </div>
+          <button
+            type="button"
+            onClick={onAdd}
+            disabled={disabled}
+            aria-label={`Adicionar ${combo.name}`}
+            className="h-10 w-10 rounded-full bg-casa-purple text-white flex items-center justify-center hover:bg-casa-purple-dark transition active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm shadow-casa-purple/30"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
       </div>
     </article>
   );
