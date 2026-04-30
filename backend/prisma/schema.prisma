@@ -1,5 +1,5 @@
-// Schema inicial da Casa do Açaí
-// Apenas auth + configurações da loja. Modelos de produtos/pedidos virão depois.
+// Schema da Casa do Açaí
+// Auth + configurações + cardápio (sizes/ingredients/combos) + pedidos + push subs.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,10 +10,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// =====================================================
+// ENUMS
+// =====================================================
+
 enum Role {
   ADMIN
   DELIVERY
 }
+
+enum IngredientCategory {
+  FRUIT
+  TOPPING
+  SAUCE
+  PREMIUM
+}
+
+enum PaymentMethod {
+  PIX
+  CARTAO
+  DINHEIRO
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderItemType {
+  CUSTOM_BOWL
+  COMBO
+}
+
+// =====================================================
+// AUTH / CONFIG
+// =====================================================
 
 model User {
   id        String   @id @default(cuid())
@@ -55,4 +90,168 @@ model OpeningHours {
 
   @@unique([dayOfWeek])
   @@map("opening_hours")
+}
+
+// =====================================================
+// CARDÁPIO
+// =====================================================
+
+// Tamanhos de tigela. Cada tamanho define quantos itens grátis vêm inclusos
+// por categoria (frutas / complementos / caldas). Premium SEMPRE cobra à parte.
+model Size {
+  id               String   @id @default(cuid())
+  name             String // "250ml", "500ml", "750ml"
+  volumeMl         Int
+  price            Float // preço base do tamanho
+  includedFruits   Int // quantas frutas grátis
+  includedToppings Int // quantos complementos grátis
+  includedSauces   Int // quantas caldas grátis
+  active           Boolean  @default(true)
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  combos     Combo[]
+  orderItems OrderItem[]
+
+  @@map("sizes")
+}
+
+// Frutas, complementos, caldas e premium.
+// - FRUIT/TOPPING/SAUCE: `price` é o valor cobrado por unidade extra (acima do incluso).
+// - PREMIUM: `price` é o valor fixo cobrado SEMPRE que escolhido (ex: Nutella).
+model Ingredient {
+  id        String             @id @default(cuid())
+  name      String
+  category  IngredientCategory
+  price     Float              @default(0)
+  isPremium Boolean            @default(false) // true pra Nutella/Ovomaltine etc
+  available Boolean            @default(true) // admin marca em falta
+  order     Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  combos     ComboIngredient[]
+  orderItems OrderItemIngredient[]
+
+  @@map("ingredients")
+}
+
+// Combos prontos com preço fixo. O combo já vem com tamanho e ingredientes definidos.
+model Combo {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float // preço fixo do combo
+  sizeId      String
+  imageUrl    String?
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  size        Size              @relation(fields: [sizeId], references: [id])
+  ingredients ComboIngredient[]
+  orderItems  OrderItem[]
+
+  @@map("combos")
+}
+
+// N:N entre Combo e Ingredient
+model ComboIngredient {
+  id           String @id @default(cuid())
+  comboId      String
+  ingredientId String
+
+  combo      Combo      @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([comboId, ingredientId])
+  @@map("combo_ingredients")
+}
+
+// =====================================================
+// PEDIDOS
+// =====================================================
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   Int           @default(autoincrement()) // número humano do pedido
+  customerName  String
+  customerPhone String
+  address       String // sempre preenchido (só delivery)
+  reference     String?
+  paymentMethod PaymentMethod
+  changeFor     Float? // troco pra DINHEIRO
+  notes         String?
+  subtotal      Float
+  deliveryFee   Float
+  total         Float
+  status        OrderStatus   @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+// Item dentro de um pedido. Pode ser tigela montada (CUSTOM_BOWL) ou combo (COMBO).
+// Os campos `sizeName`, `sizeVolumeMl`, `comboName` são SNAPSHOTS — preservam o pedido
+// mesmo se o produto for editado/excluído depois.
+model OrderItem {
+  id           String        @id @default(cuid())
+  orderId      String
+  type         OrderItemType
+  sizeId       String? // FK opcional
+  sizeName     String // snapshot
+  sizeVolumeMl Int // snapshot
+  comboId      String? // FK opcional (só pra type = COMBO)
+  comboName    String? // snapshot
+  quantity     Int           @default(1)
+  basePrice    Float // preço base (size ou combo) por unidade
+  extrasPrice  Float         @default(0) // soma dos extras pagos por unidade
+  subtotal     Float // (basePrice + extrasPrice) * quantity
+  notes        String?
+  createdAt    DateTime      @default(now())
+
+  order       Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  size        Size?                 @relation(fields: [sizeId], references: [id])
+  combo       Combo?                @relation(fields: [comboId], references: [id])
+  ingredients OrderItemIngredient[]
+
+  @@map("order_items")
+}
+
+// Ingredientes escolhidos por item. Snapshots de nome/categoria pra histórico.
+model OrderItemIngredient {
+  id                 String  @id @default(cuid())
+  orderItemId        String
+  ingredientId       String
+  ingredientName     String // snapshot
+  ingredientCategory String // snapshot do enum como string
+  isPaidExtra        Boolean // true se foi cobrado (passou do incluso ou é premium)
+  extraPrice         Float   @default(0) // quanto foi cobrado por essa escolha
+
+  orderItem  OrderItem  @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@map("order_item_ingredients")
+}
+
+// =====================================================
+// PUSH NOTIFICATIONS
+// =====================================================
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  role      String // "ADMIN" ou "DELIVERY"
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("push_subscriptions")
 }

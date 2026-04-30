@@ -1,8 +1,12 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import { ZodError } from 'zod';
 import { env } from './lib/env.js';
 import { prisma } from './lib/prisma.js';
+import { AppError } from './lib/errors.js';
+import { authRoutes } from './routes/auth.js';
+import { publicRoutes } from './routes/public.js';
 
 // Bootstrap do servidor Fastify da Casa do Açaí
 async function bootstrap() {
@@ -27,6 +31,25 @@ async function bootstrap() {
     secret: env.JWT_SECRET,
   });
 
+  // Error handler global — converte zod/AppError em respostas HTTP coerentes
+  app.setErrorHandler((err, _req, reply) => {
+    if (err instanceof ZodError) {
+      return reply.code(400).send({
+        error: 'Validação falhou',
+        issues: err.flatten(),
+      });
+    }
+    if (err instanceof AppError) {
+      return reply.code(err.statusCode).send({ error: err.message });
+    }
+    // Erro genérico — loga e devolve 500 sem vazar detalhes
+    app.log.error(err);
+    const statusCode = err.statusCode ?? 500;
+    return reply.code(statusCode).send({
+      error: statusCode >= 500 ? 'Erro interno do servidor' : err.message,
+    });
+  });
+
   // Healthcheck
   app.get('/health', async () => ({
     status: 'ok',
@@ -34,7 +57,9 @@ async function bootstrap() {
     timestamp: new Date().toISOString(),
   }));
 
-  // Rotas reais entram aqui (ex: app.register(produtosRoutes, { prefix: '/api' }))
+  // Rotas
+  await app.register(authRoutes, { prefix: '/api' });
+  await app.register(publicRoutes, { prefix: '/api' });
 
   // Encerramento limpo do Prisma
   app.addHook('onClose', async () => {
