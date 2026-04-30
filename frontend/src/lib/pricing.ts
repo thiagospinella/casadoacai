@@ -1,13 +1,43 @@
-import type { Ingredient, IngredientCategory, Size } from '@/types/menu';
+import type { IngredientCategory } from '@/types/menu';
 
-export interface PricingSelection {
-  ingredient: Ingredient;
+// ============================================================
+// Tipos
+// ============================================================
+
+export interface PricingIngredient {
+  id: string;
+  qty: number;
+  category: IngredientCategory;
+  price: number;
+  isPremium: boolean;
+  name?: string;
+}
+
+export interface PricingInput {
+  size: {
+    price: number;
+    includedFruits: number;
+    includedToppings: number;
+    includedSauces: number;
+  };
+  ingredients: PricingIngredient[];
+  quantity: number;
+}
+
+export interface CategoryBreakdown {
+  totalQty: number;
+  freeQty: number;
+  paidQty: number;
+  paidPrice: number;
+}
+
+export interface PremiumBreakdown {
   count: number;
+  price: number;
 }
 
 export interface PricingLine {
-  ingredient: Ingredient;
-  count: number;
+  ingredient: PricingIngredient;
   freeUnits: number;
   paidUnits: number;
   lineExtra: number;
@@ -16,99 +46,117 @@ export interface PricingLine {
 export interface PricingResult {
   basePrice: number;
   extrasPrice: number;
-  unitPrice: number; // por tigela (base + extras)
+  premiumPrice: number;
+  totalPerUnit: number;
+  total: number;
+  breakdown: {
+    fruits: CategoryBreakdown;
+    toppings: CategoryBreakdown;
+    sauces: CategoryBreakdown;
+    premium: PremiumBreakdown;
+  };
+  /** Por-ingrediente: quantas grátis, quantas pagas, valor cobrado. */
   lines: PricingLine[];
-  countByCategory: Record<IngredientCategory, number>;
 }
 
+// ============================================================
+// Lógica
+// ============================================================
+
 /**
- * Cálculo PURO de preço de uma tigela montada.
+ * REGRA:
+ * - Premium SEMPRE cobra (qty * price).
+ * - Não-premium: dentro de cada categoria, ordena por qty DESC e as
+ *   `included` primeiras unidades (somando entre ingredientes) são grátis.
+ *   O excedente cobra `price` por unidade.
  *
- * Espelha 1:1 o que o backend faz: itera as seleções na ordem dada e usa as N
- * primeiras unidades de cada categoria como grátis (N = size.includedXxx),
- * cobrando o resto. Premium SEMPRE cobra (não usa inclusão).
- *
- * A ordem importa — se o usuário adicionou Banana antes de Morango, Banana
- * consome os slots grátis primeiro.
+ * Como (no nosso modelo de dados) todos os ingredientes da mesma categoria
+ * têm o mesmo preço, o TOTAL de extras independe de qual ingrediente foi
+ * marcado como pago. A ordenação só afeta o BREAKDOWN por linha.
  */
-export function calculateBowlPrice(
-  size: Size,
-  selections: PricingSelection[],
-): PricingResult {
-  let extrasPrice = 0;
-  const usedFruits = { value: 0 };
-  const usedToppings = { value: 0 };
-  const usedSauces = { value: 0 };
-
-  const counts: Record<IngredientCategory, number> = {
-    FRUIT: 0,
-    TOPPING: 0,
-    SAUCE: 0,
-    PREMIUM: 0,
-  };
-
+export function calculateBowlPrice(input: PricingInput): PricingResult {
   const lines: PricingLine[] = [];
 
-  for (const sel of selections) {
-    if (sel.count <= 0) continue;
-    counts[sel.ingredient.category] += sel.count;
+  const computeCategory = (
+    category: 'FRUIT' | 'TOPPING' | 'SAUCE',
+    included: number,
+  ): CategoryBreakdown => {
+    const items = input.ingredients
+      .filter((i) => i.category === category && !i.isPremium)
+      .slice()
+      .sort((a, b) => b.qty - a.qty);
 
-    let freeUnits = 0;
-    let paidUnits = 0;
+    let remainingFree = included;
+    let totalQty = 0;
+    let paidQty = 0;
+    let paidPrice = 0;
 
-    if (sel.ingredient.isPremium) {
-      paidUnits = sel.count;
-    } else {
-      let used: { value: number };
-      let included: number;
-      switch (sel.ingredient.category) {
-        case 'FRUIT':
-          used = usedFruits;
-          included = size.includedFruits;
-          break;
-        case 'TOPPING':
-          used = usedToppings;
-          included = size.includedToppings;
-          break;
-        case 'SAUCE':
-          used = usedSauces;
-          included = size.includedSauces;
-          break;
-        case 'PREMIUM':
-        default:
-          // categoria PREMIUM sem flag premium — cobra cheio (defensivo)
-          paidUnits = sel.count;
-          used = { value: 0 };
-          included = 0;
-          break;
-      }
+    for (const item of items) {
+      const free = Math.min(remainingFree, item.qty);
+      const paid = item.qty - free;
+      const lineExtra = paid * item.price;
 
-      if (sel.ingredient.category !== 'PREMIUM') {
-        for (let i = 0; i < sel.count; i++) {
-          used.value++;
-          if (used.value <= included) freeUnits++;
-          else paidUnits++;
-        }
-      }
+      lines.push({
+        ingredient: item,
+        freeUnits: free,
+        paidUnits: paid,
+        lineExtra: round2(lineExtra),
+      });
+
+      totalQty += item.qty;
+      paidQty += paid;
+      paidPrice += lineExtra;
+      remainingFree -= free;
     }
 
-    const lineExtra = paidUnits * sel.ingredient.price;
-    extrasPrice += lineExtra;
+    return {
+      totalQty,
+      freeQty: Math.min(totalQty, included),
+      paidQty,
+      paidPrice: round2(paidPrice),
+    };
+  };
+
+  const fruits = computeCategory('FRUIT', input.size.includedFruits);
+  const toppings = computeCategory('TOPPING', input.size.includedToppings);
+  const sauces = computeCategory('SAUCE', input.size.includedSauces);
+
+  // Premium: sempre cobra cheio
+  const premiumItems = input.ingredients.filter((i) => i.isPremium);
+  let premiumCount = 0;
+  let premiumPrice = 0;
+  for (const item of premiumItems) {
+    premiumCount += item.qty;
+    const lineExtra = item.qty * item.price;
+    premiumPrice += lineExtra;
     lines.push({
-      ingredient: sel.ingredient,
-      count: sel.count,
-      freeUnits,
-      paidUnits,
-      lineExtra,
+      ingredient: item,
+      freeUnits: 0,
+      paidUnits: item.qty,
+      lineExtra: round2(lineExtra),
     });
   }
 
+  const basePrice = round2(input.size.price);
+  const extrasPrice = round2(
+    fruits.paidPrice + toppings.paidPrice + sauces.paidPrice + premiumPrice,
+  );
+  const totalPerUnit = round2(basePrice + extrasPrice);
+  const total = round2(totalPerUnit * input.quantity);
+
   return {
-    basePrice: size.price,
-    extrasPrice: round2(extrasPrice),
-    unitPrice: round2(size.price + extrasPrice),
+    basePrice,
+    extrasPrice,
+    premiumPrice: round2(premiumPrice),
+    totalPerUnit,
+    total,
+    breakdown: {
+      fruits,
+      toppings,
+      sauces,
+      premium: { count: premiumCount, price: round2(premiumPrice) },
+    },
     lines,
-    countByCategory: counts,
   };
 }
 

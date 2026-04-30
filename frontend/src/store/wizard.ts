@@ -1,69 +1,57 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 // Estado do wizard de montagem da tigela.
-// Ordem importa pra cálculo de inclusos — usamos array (não Map) pra preservar ordem.
-// Cada entrada: { ingredientId, count }.
-
-export interface WizardSelection {
-  ingredientId: string;
-  count: number;
-}
+// Persistido em localStorage pra não perder progresso se o usuário recarregar.
 
 interface WizardState {
+  step: number; // 0..4
   sizeId: string | null;
-  fruits: WizardSelection[];
-  toppings: WizardSelection[];
-  sauces: WizardSelection[];
-  premium: WizardSelection[];
+  ingredients: Record<string, number>; // ingredientId -> qty (>0)
   quantity: number;
   notes: string;
 
-  setSize: (sizeId: string) => void;
-  setIngredientCount: (
-    category: 'fruits' | 'toppings' | 'sauces' | 'premium',
-    ingredientId: string,
-    count: number,
-  ) => void;
-  setQuantity: (n: number) => void;
+  setStep: (step: number) => void;
+  setSize: (id: string) => void;
+  setIngredient: (id: string, qty: number) => void;
+  setQuantity: (qty: number) => void;
   setNotes: (notes: string) => void;
   reset: () => void;
 }
 
+const STEP_MAX = 4;
+
 const initial = {
+  step: 0,
   sizeId: null,
-  fruits: [],
-  toppings: [],
-  sauces: [],
-  premium: [],
+  ingredients: {},
   quantity: 1,
   notes: '',
 };
 
-function setCount(
-  list: WizardSelection[],
-  ingredientId: string,
-  count: number,
-): WizardSelection[] {
-  if (count <= 0) {
-    return list.filter((s) => s.ingredientId !== ingredientId);
-  }
-  const idx = list.findIndex((s) => s.ingredientId === ingredientId);
-  if (idx === -1) {
-    return [...list, { ingredientId, count }];
-  }
-  const next = [...list];
-  next[idx] = { ingredientId, count };
-  return next;
-}
-
-export const useWizard = create<WizardState>()((set) => ({
-  ...initial,
-  setSize: (sizeId) => set({ sizeId }),
-  setIngredientCount: (category, ingredientId, count) =>
-    set((s) => ({
-      [category]: setCount(s[category], ingredientId, count),
-    })),
-  setQuantity: (n) => set({ quantity: Math.max(1, Math.min(10, n)) }),
-  setNotes: (notes) => set({ notes: notes.slice(0, 200) }),
-  reset: () => set({ ...initial }),
-}));
+export const useWizard = create<WizardState>()(
+  persist(
+    (set) => ({
+      ...initial,
+      setStep: (step) => set({ step: Math.max(0, Math.min(STEP_MAX, step)) }),
+      setSize: (sizeId) => set({ sizeId }),
+      setIngredient: (id, qty) =>
+        set((s) => {
+          const next = { ...s.ingredients };
+          if (qty <= 0) {
+            delete next[id];
+          } else {
+            next[id] = Math.min(10, Math.floor(qty));
+          }
+          return { ingredients: next };
+        }),
+      setQuantity: (n) => set({ quantity: Math.max(1, Math.min(10, Math.floor(n))) }),
+      setNotes: (notes) => set({ notes: notes.slice(0, 200) }),
+      reset: () => set({ ...initial }),
+    }),
+    {
+      name: 'casaacai.wizard',
+      version: 1,
+    },
+  ),
+);
